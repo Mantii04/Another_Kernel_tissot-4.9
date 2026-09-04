@@ -54,11 +54,11 @@ jobs:
           --module MEMKERNEL \
           --enable OVERLAY_FS \
           --enable KPROBES \
-          --enable KSU
+          --set-val KSU y
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
-        # Re-force KSU to y after olddefconfig in case it got disabled
-        ../scripts/config --file .config --enable OVERLAY_FS --enable KPROBES --enable KSU
+        # Force KSU to y again after olddefconfig
+        ../scripts/config --file .config --set-val KSU y --enable KPROBES --enable OVERLAY_FS
         yes "" | make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- oldconfig
         
         echo "=== FINAL CONFIG CHECK ==="
