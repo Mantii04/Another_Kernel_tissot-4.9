@@ -46,10 +46,14 @@ jobs:
 
     - name: Configure kernel
       run: |
+        # Force CONFIG_KSU=y directly in the defconfig file!
+        sed -i 's/CONFIG_KSU=m/CONFIG_KSU=y/g' arch/arm64/configs/tissot_defconfig
+        # Also append it just in case it wasn't there
+        echo "CONFIG_KSU=y" >> arch/arm64/configs/tissot_defconfig
+        
         mkdir -p out
-        # Run from root, DO NOT cd out
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- tissot_defconfig
-        ./scripts/config --file out/.config --enable OVERLAY_FS --enable KSU --enable MODULES --enable MODULE_UNLOAD --enable KALLSYMS --enable KALLSYMS_ALL --enable MODVERSIONS --module MEMKERNEL
+        ./scripts/config --file out/.config --enable OVERLAY_FS --enable MODULES --enable MODULE_UNLOAD --enable KALLSYMS --enable KALLSYMS_ALL --enable MODVERSIONS --module MEMKERNEL
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
