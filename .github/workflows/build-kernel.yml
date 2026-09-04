@@ -29,9 +29,15 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
-    - name: Fix KSU symlink
+    - name: Copy KSU source and fix Kconfig
       run: |
-        ln -sf ../../KernelSU/kernel drivers/kernelsu
+        # 1. Copy the KSU kernel folder directly into drivers/ (no symlinks!)
+        cp -r KernelSU/kernel drivers/kernelsu
+        
+        # 2. Remove the KPROBES dependency from KSU Kconfig
+        sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
+        echo "=== KSU Kconfig fixed ==="
+        cat drivers/kernelsu/Kconfig
 
     - name: Fix Bluetooth includes
       run: |
@@ -53,12 +59,11 @@ jobs:
           --enable MODVERSIONS \
           --module MEMKERNEL \
           --enable OVERLAY_FS \
-          --enable KPROBES \
           --set-val KSU y
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
-        # Force KSU to y again after olddefconfig
-        ../scripts/config --file .config --set-val KSU y --enable KPROBES --enable OVERLAY_FS
+        # Re-force KSU to y after olddefconfig
+        ../scripts/config --file .config --set-val KSU y --enable OVERLAY_FS
         yes "" | make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- oldconfig
         
         echo "=== FINAL CONFIG CHECK ==="
