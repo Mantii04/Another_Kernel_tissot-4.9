@@ -28,6 +28,11 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
+    - name: Fix KSU symlink
+      run: |
+        # Recreate the missing symlink so the build system finds KernelSU
+        ln -sf ../../KernelSU/kernel drivers/kernelsu
+
     - name: Fix Bluetooth includes
       run: |
         find drivers/bluetooth -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i \
