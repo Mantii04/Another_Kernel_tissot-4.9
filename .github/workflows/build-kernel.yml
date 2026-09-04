@@ -30,8 +30,8 @@ jobs:
 
     - name: Fix KSU symlink
       run: |
-        # Recreate the missing symlink so the build system finds KernelSU
-        ln -sf ../../KernelSU/kernel drivers/kernelsu
+        # The KernelSU folder is in the root, point the symlink there
+        ln -sf ../../KernelSU drivers/kernelsu
 
     - name: Fix Bluetooth includes
       run: |
