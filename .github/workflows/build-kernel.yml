@@ -35,10 +35,10 @@ jobs:
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
 
-    - name: Integrate KernelSU-Next v3.2.0
+    - name: Integrate KernelSU-Next v3.2.0-legacy
       run: |
-        # Use KSU-Next v3.2.0 with Kprobes hook (exactly like the developer)
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/v3.2.0/kernel/setup.sh" | bash -s v3.2.0
+        # Use KSU-Next v3.2.0-legacy for 4.9 kernel compatibility
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/v3.2.0-legacy/kernel/setup.sh" | bash -s v3.2.0-legacy
 
     - name: Configure kernel
       run: |
