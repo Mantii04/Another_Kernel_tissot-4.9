@@ -12,7 +12,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-        submodules: true
 
     - name: Install dependencies and GCC 10
       run: |
@@ -29,12 +28,23 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
-    - name: Fix KSU Kconfig dependency
+    - name: Clone KSU and fix Kconfig
       run: |
-        # Remove the KPROBES dependency from KSU Kconfig directly in the submodule
-        sed -i '/depends on KPROBES/d' KernelSU/kernel/Kconfig
+        # 1. Remove broken symlink
+        rm -f drivers/kernelsu
+        
+        # 2. Clone official KernelSU
+        git clone --depth=1 https://github.com/tiann/KernelSU.git ksu_temp
+        
+        # 3. Copy kernel folder to drivers/kernelsu
+        cp -r ksu_temp/kernel drivers/kernelsu
+        rm -rf ksu_temp
+        
+        # 4. CRITICAL FIX: Remove KPROBES dependency from Kconfig so it can build with manual hooks
+        sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
+        
         echo "=== KSU Kconfig fixed ==="
-        cat KernelSU/kernel/Kconfig
+        cat drivers/kernelsu/Kconfig
 
     - name: Fix Bluetooth includes
       run: |
