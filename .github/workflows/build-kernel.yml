@@ -35,10 +35,7 @@ jobs:
         git clone --depth=1 https://github.com/tiann/KernelSU.git ksu_temp
         cp -r ksu_temp/kernel drivers/kernelsu
         rm -rf ksu_temp
-        # Remove KPROBES dependency so manual hooks work without broken KPROBES
         sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
-        echo "=== KSU Kconfig ==="
-        cat drivers/kernelsu/Kconfig
 
     - name: Fix Bluetooth includes
       run: |
@@ -50,14 +47,13 @@ jobs:
     - name: Configure kernel
       run: |
         mkdir -p out
+        # Run from root, DO NOT cd out
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- tissot_defconfig
-        cd out
-        # Enable KSU and OVERLAY_FS properly
-        ../scripts/config --file .config --enable OVERLAY_FS --enable KSU
+        ./scripts/config --file out/.config --enable OVERLAY_FS --enable KSU --enable MODULES --enable MODULE_UNLOAD --enable KALLSYMS --enable KALLSYMS_ALL --enable MODVERSIONS --module MEMKERNEL
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
