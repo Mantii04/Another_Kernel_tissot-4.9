@@ -31,8 +31,8 @@ jobs:
 
     - name: Copy KSU source and fix Kconfig
       run: |
-        # 1. Copy the KSU kernel folder directly into drivers/ (no symlinks!)
-        cp -r KernelSU/kernel drivers/kernelsu
+        # 1. Copy the KSU kernel folder directly into drivers/ using -L to follow symlinks
+        cp -rL KernelSU/kernel drivers/kernelsu
         
         # 2. Remove the KPROBES dependency from KSU Kconfig
         sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
