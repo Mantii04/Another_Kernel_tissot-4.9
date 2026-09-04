@@ -28,11 +28,12 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
-    - name: Clone KSU and fix Kconfig
+    - name: Clone KSU v0.9.5 and fix Kconfig
       run: |
         rm -f drivers/kernelsu
         rm -rf KernelSU
-        git clone --depth=1 https://github.com/tiann/KernelSU.git ksu_temp
+        # MUST use v0.9.5 tag for non-GKI 4.9 kernels!
+        git clone --depth=1 -b v0.9.5 https://github.com/tiann/KernelSU.git ksu_temp
         cp -r ksu_temp/kernel drivers/kernelsu
         rm -rf ksu_temp
         sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
@@ -46,9 +47,8 @@ jobs:
 
     - name: Configure kernel
       run: |
-        # Force CONFIG_KSU=y directly in the defconfig file!
+        # Force CONFIG_KSU=y directly in the defconfig file
         sed -i 's/CONFIG_KSU=m/CONFIG_KSU=y/g' arch/arm64/configs/tissot_defconfig
-        # Also append it just in case it wasn't there
         echo "CONFIG_KSU=y" >> arch/arm64/configs/tissot_defconfig
         
         mkdir -p out
