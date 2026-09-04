@@ -31,7 +31,6 @@ jobs:
 
     - name: Fix KSU symlink
       run: |
-        # Recreate the missing symlink so the build system finds KernelSU
         ln -sf ../../KernelSU/kernel drivers/kernelsu
 
     - name: Fix Bluetooth includes
@@ -52,8 +51,15 @@ jobs:
           --enable KALLSYMS \
           --enable KALLSYMS_ALL \
           --enable MODVERSIONS \
-          --module MEMKERNEL
+          --module MEMKERNEL \
+          --enable OVERLAY_FS \
+          --enable KPROBES \
+          --enable KSU
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+        
+        # Re-force KSU to y after olddefconfig in case it got disabled
+        ../scripts/config --file .config --enable OVERLAY_FS --enable KPROBES --enable KSU
+        yes "" | make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- oldconfig
         
         echo "=== FINAL CONFIG CHECK ==="
         grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
