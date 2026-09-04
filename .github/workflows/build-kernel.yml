@@ -39,6 +39,8 @@ jobs:
       run: |
         # Force KSU and dependencies directly into the defconfig so olddefconfig can't disable them
         echo "CONFIG_OVERLAY_FS=y" >> arch/arm64/configs/tissot_defconfig
+echo "CONFIG_KPROBES=y" >> arch/arm64/configs/tissot_defconfig
+echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/tissot_defconfig
         echo "CONFIG_KSU=y" >> arch/arm64/configs/tissot_defconfig
 
     - name: Configure kernel
@@ -56,7 +58,7 @@ jobs:
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
