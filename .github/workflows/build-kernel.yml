@@ -1,0 +1,91 @@
+name: Build Tissot Treble Kernel + KSU + memkernel
+
+on:
+  push:
+    branches: [ "NON-OC" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Install dependencies and GCC 10
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip
+        sudo apt-get install -y gcc-10-aarch64-linux-gnu g++-10-aarch64-linux-gnu
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-10 /usr/bin/aarch64-linux-gnu-gcc
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-g++-10 /usr/bin/aarch64-linux-gnu-g++
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-ar-10 /usr/bin/aarch64-linux-gnu-gcc-ar
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-nm-10 /usr/bin/aarch64-linux-gnu-gcc-nm
+        sudo apt-get install -y gcc-10-arm-linux-gnueabi g++-10-arm-linux-gnueabi
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-10 /usr/bin/arm-linux-gnueabi-gcc
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-g++-10 /usr/bin/arm-linux-gnueabi-g++
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
+
+    - name: Fix Bluetooth includes
+      run: |
+        find drivers/bluetooth -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i \
+          -e 's/<btfm_slim\.h>/"btfm_slim.h"/g' \
+          -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
+          -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
+
+    - name: Configure kernel
+      run: |
+        mkdir -p out
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- tissot_defconfig
+        cd out
+        ../scripts/config --file .config \
+          --enable MODULES \
+          --enable MODULE_UNLOAD \
+          --enable KALLSYMS \
+          --enable KALLSYMS_ALL \
+          --enable MODVERSIONS \
+          --module MEMKERNEL
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+        
+        echo "=== FINAL CONFIG CHECK ==="
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
+
+    - name: Build vmlinux, modules, and Image.gz-dtb
+      run: |
+        set -o pipefail
+        make -j$(nproc) \
+          O=out \
+          ARCH=arm64 \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          KCFLAGS="-Wno-error=implicit-function-declaration -Wno-error=strict-prototypes -Wno-error=incompatible-pointer-types -Wno-error=address-of-packed-member" \
+          vmlinux modules Image.gz-dtb 2>&1 | tee kernel_build.log
+        ls -la out/arch/arm64/boot/Image.gz-dtb
+        ls -la out/drivers/memkernel/*.ko
+
+    - name: Upload kernel image
+      uses: actions/upload-artifact@v4
+      with:
+        name: Image-gz-dtb
+        path: out/arch/arm64/boot/Image.gz-dtb
+        if-no-files-found: error
+        retention-days: 30
+
+    - name: Upload memkernel module
+      uses: actions/upload-artifact@v4
+      with:
+        name: memkernel-module
+        path: out/drivers/memkernel/*.ko
+        if-no-files-found: error
+        retention-days: 30
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: kernel_build.log
+        if-no-files-found: warn
+        retention-days: 7
