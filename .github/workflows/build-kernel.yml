@@ -30,20 +30,13 @@ jobs:
 
     - name: Clone KSU and fix Kconfig
       run: |
-        # 1. Remove broken symlink
         rm -f drivers/kernelsu
-        
-        # 2. Clone official KernelSU
+        rm -rf KernelSU
         git clone --depth=1 https://github.com/tiann/KernelSU.git ksu_temp
-        
-        # 3. Copy kernel folder to drivers/kernelsu
         cp -r ksu_temp/kernel drivers/kernelsu
         rm -rf ksu_temp
-        
-        # 4. CRITICAL FIX: Remove KPROBES dependency from Kconfig so it can build with manual hooks
         sed -i '/depends on KPROBES/d' drivers/kernelsu/Kconfig
-        
-        echo "=== KSU Kconfig fixed ==="
+        echo "=== KSU Kconfig ==="
         cat drivers/kernelsu/Kconfig
 
     - name: Fix Bluetooth includes
@@ -69,9 +62,11 @@ jobs:
           --set-val KSU y
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
-        # Re-force KSU to y after olddefconfig
-        ../scripts/config --file .config --set-val KSU y --enable OVERLAY_FS
-        yes "" | make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- oldconfig
+        # BULLETPROOF: Directly sed the .config file to force KSU=y
+        # Remove any existing KSU line and add CONFIG_KSU=y
+        sed -i '/CONFIG_KSU/d' .config
+        sed -i '/CONFIG_KSU/d' .config
+        echo "CONFIG_KSU=y" >> .config
         
         echo "=== FINAL CONFIG CHECK ==="
         grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
