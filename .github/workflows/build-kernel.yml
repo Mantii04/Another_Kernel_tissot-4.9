@@ -35,6 +35,12 @@ jobs:
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
 
+    - name: Force KSU and OVERLAY_FS into defconfig
+      run: |
+        # Force KSU and dependencies directly into the defconfig so olddefconfig can't disable them
+        echo "CONFIG_OVERLAY_FS=y" >> arch/arm64/configs/tissot_defconfig
+        echo "CONFIG_KSU=y" >> arch/arm64/configs/tissot_defconfig
+
     - name: Configure kernel
       run: |
         mkdir -p out
@@ -46,11 +52,11 @@ jobs:
           --enable KALLSYMS \
           --enable KALLSYMS_ALL \
           --enable MODVERSIONS \
-          --enable OVERLAY_FS \
-          --enable KSU \
-          --module MEMKERNEL \
-          --enable KSU
+          --module MEMKERNEL
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+        
+        echo "=== FINAL CONFIG CHECK ==="
+        grep -E "^CONFIG_KSU=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" .config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
