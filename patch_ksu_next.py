@@ -32,16 +32,12 @@ patch_file('fs/open.c',
     '\tif (mode & ~S_IRWXO)\n\t\treturn -EINVAL;',
     '\t#ifdef CONFIG_KSU\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n\t#endif\n\n\tif (mode & ~S_IRWXO)\n\t\treturn -EINVAL;')
 
-# fs/read_write.c
+# fs/read_write.c - FIXED TARGETING
 patch_file('fs/read_write.c',
-    'SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)',
-    '#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\t\t\t       char __user **buf_ptr, size_t *count_ptr);\n#endif\n\nSYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)')
+    'SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)\n{\n\tstruct fd f = fdget_pos(fd);\n\tssize_t ret = -EBADF;\n\n\tif (f.file) {',
+    '#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,\n\t\t\t\t\t\t       char __user **buf_ptr, size_t *count_ptr);\n#endif\n\nSYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)\n{\n\tstruct fd f = fdget_pos(fd);\n\tssize_t ret = -EBADF;\n\n\t#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n\t#endif\n\n\tif (f.file) {')
 
-patch_file('fs/read_write.c',
-    '\tif (f.file) {\n\t\tloff_t pos = file_pos_read(f.file);',
-    '\t#ifdef CONFIG_KSU\n\tif (unlikely(ksu_vfs_read_hook))\n\t\tksu_handle_sys_read(fd, &buf, &count);\n\t#endif\n\n\tif (f.file) {\n\t\tloff_t pos = file_pos_read(f.file);')
-
-# fs/stat.c (using vfs_fstatat fallback for 4.9)
+# fs/stat.c
 patch_file('fs/stat.c',
     'int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,',
     '#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t   int *flags);\n#endif\n\nint vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,')
