@@ -13,10 +13,20 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Install dependencies
+    - name: Install dependencies and GCC 10 (for GNU assembler)
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip lld
+        sudo apt-get install -y gcc-10-aarch64-linux-gnu g++-10-aarch64-linux-gnu
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-10 /usr/bin/aarch64-linux-gnu-gcc
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-g++-10 /usr/bin/aarch64-linux-gnu-g++
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-ar-10 /usr/bin/aarch64-linux-gnu-gcc-ar
+        sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-nm-10 /usr/bin/aarch64-linux-gnu-gcc-nm
+        sudo apt-get install -y gcc-10-arm-linux-gnueabi g++-10-arm-linux-gnueabi
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-10 /usr/bin/arm-linux-gnueabi-gcc
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-g++-10 /usr/bin/arm-linux-gnueabi-g++
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
+        sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
     - name: Clone Proton Clang
       run: |
@@ -80,7 +90,8 @@ jobs:
           OBJCOPY=../clang/bin/llvm-objcopy \
           OBJDUMP=../clang/bin/llvm-objdump \
           STRIP=../clang/bin/llvm-strip \
-          KCFLAGS="-Wno-error=implicit-function-declaration -Wno-error=strict-prototypes -Wno-error=incompatible-pointer-types -Wno-error=address-of-packed-member" \
+          AS=aarch64-linux-gnu-as \
+          KCFLAGS="-fno-integrated-as -Wno-error=implicit-function-declaration -Wno-error=strict-prototypes -Wno-error=incompatible-pointer-types -Wno-error=address-of-packed-member" \
           vmlinux modules Image.gz-dtb 2>&1 | tee kernel_build.log
         ls -la out/arch/arm64/boot/Image.gz-dtb
         ls -la out/drivers/memkernel/*.ko
