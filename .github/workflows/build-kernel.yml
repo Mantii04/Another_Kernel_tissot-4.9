@@ -35,9 +35,10 @@ jobs:
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
 
-    - name: Integrate KernelSU-Next (legacy tag)
+    - name: Integrate KernelSU-Next (next branch for kprobe auto-hooks)
       run: |
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
+        # Use the next branch which has the Kprobe auto-hook code
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
 
     - name: Configure kernel
       run: |
