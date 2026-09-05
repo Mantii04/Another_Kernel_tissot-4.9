@@ -35,7 +35,6 @@ jobs:
         sed -i '/kernelsu/d' drivers/staging/Kconfig
         sed -i '/kernelsu/d' drivers/staging/Makefile
         
-        # Use v3.2.0 tag (NOT next/v3.3.0 which uses compiler_types.h)
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/v3.2.0/kernel/setup.sh" | bash -s v3.2.0
         
         # Fix: Define syscall_fn_t for 4.9 kernel
@@ -57,11 +56,13 @@ jobs:
           --enable KPROBES \
           --enable KPROBE_EVENTS \
           --enable KSU_KPROBE_HOOKS \
-          --set-val KSU y
+          --set-val KSU y \
+          --disable CC_STACKPROTECTOR_STRONG \
+          --disable CC_STACKPROTECTOR
         make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=|^CONFIG_CC_STACKPROTECTOR" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
