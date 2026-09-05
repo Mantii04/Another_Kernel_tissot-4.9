@@ -35,13 +35,18 @@ jobs:
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
 
-    - name: Integrate KernelSU-Next (legacy) and apply manual hooks
+    - name: Integrate KernelSU-Next and fix 4.9 syscall error
       run: |
         rm -rf drivers/staging/kernelsu
         sed -i '/kernelsu/d' drivers/staging/Kconfig
         sed -i '/kernelsu/d' drivers/staging/Makefile
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
-        python3 patch_ksu_next.py
+        
+        # Use next branch for Kprobes (manipulated mode)
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+        
+        # FIX: Define syscall_fn_t for 4.9 kernel
+        grep -q "typedef void \(\*syscall_fn_t\)(void);" drivers/kernelsu/hook/syscall_hook.h || \
+        sed -i '/#include <linux\/syscall.h>/a typedef void (*syscall_fn_t)(void);' drivers/kernelsu/hook/syscall_hook.h
 
     - name: Configure kernel
       run: |
@@ -55,11 +60,14 @@ jobs:
           --disable MODVERSIONS \
           --module MEMKERNEL \
           --enable OVERLAY_FS \
+          --enable KPROBES \
+          --enable KPROBE_EVENTS \
+          --enable KSU_KPROBE_HOOKS \
           --set-val KSU y
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
