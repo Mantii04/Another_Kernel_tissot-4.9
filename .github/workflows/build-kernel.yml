@@ -13,10 +13,10 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Install dependencies and GCC 10 (for GNU assembler)
+    - name: Install dependencies and GCC 10
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip lld
+        sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip
         sudo apt-get install -y gcc-10-aarch64-linux-gnu g++-10-aarch64-linux-gnu
         sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-10 /usr/bin/aarch64-linux-gnu-gcc
         sudo ln -sf /usr/bin/aarch64-linux-gnu-g++-10 /usr/bin/aarch64-linux-gnu-g++
@@ -27,10 +27,6 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-g++-10 /usr/bin/arm-linux-gnueabi-g++
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
-
-    - name: Clone Proton Clang
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git ../clang
 
     - name: Fix Bluetooth includes
       run: |
@@ -52,9 +48,8 @@ jobs:
 
     - name: Configure kernel
       run: |
-        export PATH="../clang/bin:$PATH"
         mkdir -p out
-        make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- tissot_defconfig
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- tissot_defconfig
         ./scripts/config --file out/.config \
           --enable MODULES \
           --enable MODULE_UNLOAD \
@@ -66,32 +61,21 @@ jobs:
           --enable KPROBES \
           --enable KPROBE_EVENTS \
           --enable KSU_KPROBE_HOOKS \
-          --set-val KSU y \
-          --disable CC_STACKPROTECTOR_STRONG \
-          --disable CC_STACKPROTECTOR
-        make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+          --set-val KSU y
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=|^CONFIG_CC_STACKPROTECTOR" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
-        export PATH="../clang/bin:$PATH"
         set -o pipefail
         make -j$(nproc) \
           O=out \
           ARCH=arm64 \
-          CC=clang \
           CROSS_COMPILE=aarch64-linux-gnu- \
           CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-          LD=../clang/bin/ld.lld \
-          AR=../clang/bin/llvm-ar \
-          NM=../clang/bin/llvm-nm \
-          OBJCOPY=../clang/bin/llvm-objcopy \
-          OBJDUMP=../clang/bin/llvm-objdump \
-          STRIP=../clang/bin/llvm-strip \
-          AS=aarch64-linux-gnu-as \
-          KCFLAGS="-fno-integrated-as -Wno-error=implicit-function-declaration -Wno-error=strict-prototypes -Wno-error=incompatible-pointer-types -Wno-error=address-of-packed-member" \
+          KCFLAGS="-Wno-error=implicit-function-declaration -Wno-error=strict-prototypes -Wno-error=incompatible-pointer-types -Wno-error=address-of-packed-member" \
           vmlinux modules Image.gz-dtb 2>&1 | tee kernel_build.log
         ls -la out/arch/arm64/boot/Image.gz-dtb
         ls -la out/drivers/memkernel/*.ko
