@@ -35,10 +35,9 @@ jobs:
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
 
-    - name: Integrate KernelSU-Next v3.2.0-legacy
+    - name: Integrate KernelSU-Next (legacy tag)
       run: |
-        # Use KSU-Next v3.2.0-legacy for 4.9 kernel compatibility
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/v3.2.0-legacy/kernel/setup.sh" | bash -s v3.2.0-legacy
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
 
     - name: Configure kernel
       run: |
@@ -53,11 +52,17 @@ jobs:
           --module MEMKERNEL \
           --enable OVERLAY_FS \
           --enable KPROBES \
-          --enable KSU
+          --enable KPROBE_EVENTS \
+          --enable KSU_KPROBE_HOOKS \
+          --set-val KSU y
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+        
+        # Force KSU and KPROBE_HOOKS to y after olddefconfig
+        ./scripts/config --file out/.config --set-val KSU y --enable KSU_KPROBE_HOOKS --enable KPROBES
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_KPROBE_EVENTS=|^CONFIG_KSU_KPROBE_HOOKS=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
