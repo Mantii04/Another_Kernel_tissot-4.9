@@ -41,12 +41,10 @@ jobs:
         sed -i '/kernelsu/d' drivers/staging/Kconfig
         sed -i '/kernelsu/d' drivers/staging/Makefile
         
-        # Use next branch for Kprobes (manipulated mode)
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
         
-        # FIX: Define syscall_fn_t for 4.9 kernel
-        grep -q "typedef void \(\*syscall_fn_t\)(void);" drivers/kernelsu/hook/syscall_hook.h || \
-        sed -i '/#include <linux\/syscall.h>/a typedef void (*syscall_fn_t)(void);' drivers/kernelsu/hook/syscall_hook.h
+        # FIX: Add typedef to the very top of the file
+        sed -i '1i typedef void (*syscall_fn_t)(void);' drivers/kernelsu/hook/syscall_hook.h
 
     - name: Configure kernel
       run: |
