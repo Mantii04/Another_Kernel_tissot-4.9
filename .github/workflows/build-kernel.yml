@@ -37,15 +37,10 @@ jobs:
 
     - name: Integrate KernelSU-Next (legacy) and apply manual hooks
       run: |
-        # 1. Remove any old KSU from staging to prevent multiple definition errors!
         rm -rf drivers/staging/kernelsu
         sed -i '/kernelsu/d' drivers/staging/Kconfig
         sed -i '/kernelsu/d' drivers/staging/Makefile
-        
-        # 2. Add KSU-Next legacy
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
-        
-        # 3. Apply manual hooks from documentation
         python3 patch_ksu_next.py
 
     - name: Configure kernel
@@ -57,14 +52,14 @@ jobs:
           --enable MODULE_UNLOAD \
           --enable KALLSYMS \
           --enable KALLSYMS_ALL \
-          --enable MODVERSIONS \
+          --disable MODVERSIONS \
           --module MEMKERNEL \
           --enable OVERLAY_FS \
           --set-val KSU y
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
         
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
