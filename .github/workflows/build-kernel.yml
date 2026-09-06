@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies and GCC 10 (for binutils)
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip lld
+        sudo apt-get install -y build-essential bc bison flex libncurses-dev libssl-dev libelf-dev python3 git zip lld patch
         sudo apt-get install -y gcc-10-aarch64-linux-gnu g++-10-aarch64-linux-gnu
         sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-10 /usr/bin/aarch64-linux-gnu-gcc
         sudo ln -sf /usr/bin/aarch64-linux-gnu-g++-10 /usr/bin/aarch64-linux-gnu-g++
@@ -41,28 +41,37 @@ jobs:
         sed -i 's/char selinux_enforcing = 1;/char selinux_enforcing = 0;/g' security/selinux/hooks.c
         sed -i '1i #ifndef stune_boost\n#define stune_boost do_stune_boost\n#endif' drivers/cpufreq/cpu_input_boost.c
 
+    - name: Apply SuSFS patches (BEFORE KSU hooks)
+      run: |
+        # 1. Clone SuSFS kernel-4.9 branch
+        git clone --depth=1 -b kernel-4.9 https://gitlab.com/simonpunk/susfs4ksu.git ../susfs
+        
+        # 2. Copy SuSFS source files
+        cp ../susfs/kernel_patches/fs/susfs.c fs/
+        cp ../susfs/kernel_patches/include/linux/susfs.h include/linux/
+        
+        # 3. Copy the SuSFS kernel patch
+        cp ../susfs/kernel_patches/50_add_susfs_in_kernel-4.9.patch .
+        
+        # 4. Apply the SuSFS kernel patch
+        patch -p1 < 50_add_susfs_in_kernel-4.9.patch || true
+        echo "=== SuSFS kernel patch applied ==="
+
     - name: Integrate KernelSU-Next (legacy) and apply manual hooks
       run: |
         rm -rf drivers/staging/kernelsu
         sed -i '/kernelsu/d' drivers/staging/Kconfig
         sed -i '/kernelsu/d' drivers/staging/Makefile
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
+        
+        # Apply SuSFS patch for KernelSU source
+        cp ../susfs/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch KernelSU-Next/kernel/
+        cd KernelSU-Next/kernel
+        patch -p1 < 10_enable_susfs_for_ksu.patch || true
+        cd ../..
+        
+        # Apply our manual KSU hooks AFTER SuSFS
         python3 patch_ksu_next.py
-
-    - name: Apply SuSFS patches
-      run: |
-        # Clone SuSFS
-        git clone --depth=1 https://github.com/sidex15/susfs4ksu.git ../susfs
-        
-        # Copy SuSFS source files
-        cp ../susfs/kernel/susfs.c fs/
-        cp ../susfs/kernel/susfs.h include/linux/
-        cp ../susfs/kernel/susfs_*.h include/linux/
-        
-        # Apply SuSFS patches to kernel source
-        cd ../susfs/kernel
-        bash apply.sh ../../kernel
-        cd ../../kernel
 
     - name: Configure kernel
       run: |
