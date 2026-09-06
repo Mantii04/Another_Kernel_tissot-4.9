@@ -18,7 +18,7 @@ def patch_file(filepath, old_str, new_str):
 patch_file('fs/exec.c', 'int do_execve(struct filename *filename,', '#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,\n\t\t\t       void *argv, void *envp, int *flags);\n#endif\n\nint do_execve(struct filename *filename,')
 patch_file('fs/exec.c', '\treturn do_execveat_common(AT_FDCWD, filename, argv, envp, 0);\n}', '\t#ifdef CONFIG_KSU\n\tksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);\n\t#endif\n\n\treturn do_execveat_common(AT_FDCWD, filename, argv, envp, 0);\n}')
 
-# fs/open.c - FIXED with simpler string match for OC-Treble
+# fs/open.c
 patch_file('fs/open.c', 'SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)', '#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,\n\t\t\t        int *mode, int *flags);\n#endif\n\nSYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)')
 patch_file('fs/open.c', 'if (mode & ~S_IRWXO)', '#ifdef CONFIG_KSU\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n\t#endif\n\n\tif (mode & ~S_IRWXO)')
 

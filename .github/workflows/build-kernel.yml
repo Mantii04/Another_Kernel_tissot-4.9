@@ -1,4 +1,4 @@
-name: Build Tissot OC-Treble Kernel + KSU-Next + memkernel (Clang)
+name: Build Tissot OC-Treble + KSU-Next + SuSFS + memkernel (Clang)
 
 on:
   push:
@@ -38,11 +38,7 @@ jobs:
           -e 's/<btfm_slim\.h>/"btfm_slim.h"/g' \
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
-        
-        # Hardcode SELinux Permissive
         sed -i 's/char selinux_enforcing = 1;/char selinux_enforcing = 0;/g' security/selinux/hooks.c
-        
-        # Fix CPU Input Boost stune_boost identifier error (add to top of file)
         sed -i '1i #ifndef stune_boost\n#define stune_boost do_stune_boost\n#endif' drivers/cpufreq/cpu_input_boost.c
 
     - name: Integrate KernelSU-Next (legacy) and apply manual hooks
@@ -52,6 +48,21 @@ jobs:
         sed -i '/kernelsu/d' drivers/staging/Makefile
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
         python3 patch_ksu_next.py
+
+    - name: Apply SuSFS patches
+      run: |
+        # Clone SuSFS
+        git clone --depth=1 https://github.com/sidex15/susfs4ksu.git ../susfs
+        
+        # Copy SuSFS source files
+        cp ../susfs/kernel/susfs.c fs/
+        cp ../susfs/kernel/susfs.h include/linux/
+        cp ../susfs/kernel/susfs_*.h include/linux/
+        
+        # Apply SuSFS patches to kernel source
+        cd ../susfs/kernel
+        bash apply.sh ../../kernel
+        cd ../../kernel
 
     - name: Configure kernel
       run: |
@@ -67,13 +78,14 @@ jobs:
           --module MEMKERNEL \
           --enable OVERLAY_FS \
           --set-val KSU y \
+          --enable KSU_SUSFS \
           --enable CPU_INPUT_BOOST \
           --disable CC_STACKPROTECTOR_STRONG \
           --disable CC_STACKPROTECTOR
         make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
 
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=|^CONFIG_CPU_INPUT_BOOST=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KSU_SUSFS=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=|^CONFIG_CPU_INPUT_BOOST=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
