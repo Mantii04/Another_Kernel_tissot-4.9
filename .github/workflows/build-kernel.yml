@@ -1,4 +1,4 @@
-name: Build Tissot OC-Treble Kernel + KSU-Next + memkernel
+name: Build Clean OC-Treble Kernel + memkernel (NO KSU)
 
 on:
   push:
@@ -28,20 +28,13 @@ jobs:
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-ar-10 /usr/bin/arm-linux-gnueabi-gcc-ar
         sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-nm-10 /usr/bin/arm-linux-gnueabi-gcc-nm
 
-    - name: Fix Bluetooth includes
+    - name: Fix Bluetooth includes and Hardcode SELinux Permissive
       run: |
         find drivers/bluetooth -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i \
           -e 's/<btfm_slim\.h>/"btfm_slim.h"/g' \
           -e 's/<btfm_slim_wcn3990\.h>/"btfm_slim_wcn3990.h"/g' \
           -e 's/<btfm_slim_codec\.h>/"btfm_slim_codec.h"/g' {} +
-
-    - name: Integrate KernelSU-Next (legacy) and apply manual hooks
-      run: |
-        rm -rf drivers/staging/kernelsu
-        sed -i '/kernelsu/d' drivers/staging/Kconfig
-        sed -i '/kernelsu/d' drivers/staging/Makefile
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
-        python3 patch_ksu_next.py
+        sed -i 's/char selinux_enforcing = 1;/char selinux_enforcing = 0;/g' security/selinux/hooks.c
 
     - name: Configure kernel
       run: |
@@ -54,12 +47,11 @@ jobs:
           --enable KALLSYMS_ALL \
           --disable MODVERSIONS \
           --module MEMKERNEL \
-          --enable OVERLAY_FS \
-          --set-val KSU y
+          --enable OVERLAY_FS
         make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
 
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=|^CONFIG_CMDLINE=" out/.config
+        grep -E "^CONFIG_KSU=|^CONFIG_KPROBES=|^CONFIG_OVERLAY_FS=|^CONFIG_MEMKERNEL=|^CONFIG_MODULES=|^CONFIG_MODVERSIONS=" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
