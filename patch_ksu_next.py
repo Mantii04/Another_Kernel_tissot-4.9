@@ -23,14 +23,14 @@ patch_file('fs/exec.c',
     '\treturn do_execveat_common(AT_FDCWD, filename, argv, envp, 0);\n}',
     '\t#ifdef CONFIG_KSU\n\tksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);\n\t#endif\n\n\treturn do_execveat_common(AT_FDCWD, filename, argv, envp, 0);\n}')
 
-# fs/open.c
+# fs/open.c - FIXED for OC-Treble (has comment on the line)
 patch_file('fs/open.c',
     'SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)',
     '#ifdef CONFIG_KSU\n__attribute__((hot))\nextern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,\n\t\t\t        int *mode, int *flags);\n#endif\n\nSYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)')
 
 patch_file('fs/open.c',
-    '\tif (mode & ~S_IRWXO)\n\t\treturn -EINVAL;',
-    '\t#ifdef CONFIG_KSU\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n\t#endif\n\n\tif (mode & ~S_IRWXO)\n\t\treturn -EINVAL;')
+    'if (mode & ~S_IRWXO)    /* where\'s F_OK, X_OK, W_OK, R_OK? */\n\t\treturn -EINVAL;',
+    '#ifdef CONFIG_KSU\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n\t#endif\n\n\tif (mode & ~S_IRWXO)    /* where\'s F_OK, X_OK, W_OK, R_OK? */\n\t\treturn -EINVAL;')
 
 # fs/read_write.c
 patch_file('fs/read_write.c',
