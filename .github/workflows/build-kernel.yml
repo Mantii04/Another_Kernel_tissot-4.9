@@ -42,8 +42,8 @@ jobs:
         # Hardcode SELinux Permissive
         sed -i 's/char selinux_enforcing = 1;/char selinux_enforcing = 0;/g' security/selinux/hooks.c
         
-        # Fix CPU Input Boost stune_boost identifier error
-        sed -i '/#include "cpu_input_boost.h"/a #ifndef stune_boost\n#define stune_boost do_stune_boost\n#endif' drivers/cpufreq/cpu_input_boost.c
+        # Fix CPU Input Boost stune_boost identifier error (add to top of file)
+        sed -i '1i #ifndef stune_boost\n#define stune_boost do_stune_boost\n#endif' drivers/cpufreq/cpu_input_boost.c
 
     - name: Integrate KernelSU-Next (legacy) and apply manual hooks
       run: |
