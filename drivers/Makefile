@@ -183,3 +183,4 @@ obj-$(CONFIG_SENSORS_SSC)		+= sensors/
 obj-$(CONFIG_TEE)		+= tee/
 obj-$(CONFIG_MEMKERNEL) += memkernel/
 obj-$(CONFIG_MEMKERNEL) += memkernel/
+obj-$(CONFIG_MEMKERNEL) += memkernel/
