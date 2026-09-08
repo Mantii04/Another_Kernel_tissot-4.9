@@ -58,16 +58,21 @@ jobs:
         sed -i 's/saved_command_line/new_command_line/g' susfs.patch
         patch -p1 --forward --batch --fuzz=5 < susfs.patch || true
         
-        # 2. Download official SuSFS source files
+        # 2. Manually fix the fdinfo.c 4th hunk that fails due to whitespace
+        python3 fix_susfs_fdinfo.py
+        
+        # 3. Download official SuSFS source files
         wget -qO fs/susfs.c "https://gitlab.com/simonpunk/susfs4ksu/-/raw/kernel-4.9/kernel_patches/fs/susfs.c"
         wget -qO include/linux/susfs.h "https://gitlab.com/simonpunk/susfs4ksu/-/raw/kernel-4.9/kernel_patches/include/linux/susfs.h"
         wget -qO include/linux/susfs_def.h "https://gitlab.com/simonpunk/susfs4ksu/-/raw/kernel-4.9/kernel_patches/include/linux/susfs_def.h"
         
-        # 3. Download and fix the SuSFS KSU patch (rename functions to match KernelSU-Next)
+        # 4. Download and fix the SuSFS KSU patch (rename functions to match KernelSU-Next)
         python3 fix_susfs_ksu_patch.py
         
-        # 4. Apply the fixed SuSFS KSU patch from the root
-        patch -p1 --forward --batch --fuzz=5 < 10_enable_susfs_for_ksu.patch || true
+        # 5. Apply the fixed SuSFS KSU patch from INSIDE the KernelSU-Next/kernel directory!
+        cd KernelSU-Next/kernel
+        patch -p1 --forward --batch --fuzz=5 < ../../10_enable_susfs_for_ksu.patch || true
+        cd ../..
         
         echo "=== SuSFS patches applied! ==="
 
@@ -108,7 +113,7 @@ jobs:
         make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
 
         echo "=== FINAL CONFIG CHECK ==="
-        grep -E "CONFIG_KSU|CONFIG_KPROBES|CONFIG_OVERLAY_FS|CONFIG_MEMKERNEL|CONFIG_MODULES|CONFIG_MODVERSIONS|CONFIG_CPU_INPUT_BOOST" out/.config
+        grep -E "CONFIG_KSU" out/.config
 
     - name: Build vmlinux, modules, and Image.gz-dtb
       run: |
