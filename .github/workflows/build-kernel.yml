@@ -71,7 +71,7 @@ jobs:
         
         # 5. Apply the fixed SuSFS KSU patch from INSIDE the KernelSU-Next/kernel directory!
         cd KernelSU-Next/kernel
-        patch -p1 --forward --batch --fuzz=5 < ../../10_enable_susfs_for_ksu.patch || true
+        patch -p2 --forward --batch --fuzz=5 < ../../10_enable_susfs_for_ksu.patch || true
         cd ../..
         
         echo "=== SuSFS patches applied! ==="
